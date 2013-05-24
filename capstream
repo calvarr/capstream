@@ -1,0 +1,33 @@
+#! /bin/bash
+echo "omor procesele flash existente"
+flash=`ps aux | grep flash|sed -n '1p'|awk '{print $2}'`
+kill $flash
+export adrfile=`pwd`/rtmptemp
+> $adrfile
+echo "deschid portul tcp 1935 pentru a redirectiona fluxul flash"
+sudo iptables -t nat -A OUTPUT -p tcp --dport 1935 -j REDIRECT
+echo "astept deschiderea webbrowser cu adresa fluxului"
+xdg-open $1 
+exec 2> /dev/null 
+rtmpsrv | grep "rtmpdump" | tee rtmptemp &
+sleep 3
+echo "Apasati Enter pentru a intrerupe captura"
+echo "Asteptati..."
+read i
+#pidsrv=`ps aux|grep rtmpsrv|sed -n '1p'|awk '{print $2}'`
+#kill $pidsrv
+killall rtmpsrv
+sudo iptables -t nat -D OUTPUT -p tcp --dport 1935 -j REDIRECT
+#sau sudo iptables -t nat -F
+echo "inchid portul tcp 1935"
+if [[ -s $adrfile ]];then
+adr=`cat rtmptemp|sed 's/-o/-o \n/'|sed -n '1p'`
+seek=`cat rtmptemp|sed 's/-o/-o \n/'|sed -n '2p'`
+rm $seek
+echo $adr
+$adr -|vlc -
+else
+echo "nu am putut capta adresa"
+fi
+exit
+
